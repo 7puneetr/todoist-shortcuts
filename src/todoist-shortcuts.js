@@ -21,7 +21,7 @@
   var TODOIST_SHORTCUTS_VERSION = 76;
 
   // Set this to true to get more log output.
-  var DEBUG = false;
+  var DEBUG = true;
 
   // TODO: remove this once feasible
   var IS_BETA = window.location.host === 'beta.todoist.com';
@@ -1661,6 +1661,9 @@
     registerMutationObserver(document.body, handleBodyChange);
   }
 
+  // MUTABLE. Tracks whether task view was open last time a body change happened.
+  var taskViewWasOpen = false;
+
   function handleBodyChange() {
     var nextTask;
     updateKeymap();
@@ -1698,6 +1701,14 @@
           exitBulkMove();
         }
       }
+    }
+    if (checkTaskViewOpen()) {
+      if (!taskViewWasOpen) {
+        taskViewWasOpen = true;
+        blurParentButton(0);
+      }
+    } else {
+      taskViewWasOpen = false;
     }
   }
 
@@ -1737,6 +1748,21 @@
       debug('Setting keymap to', keymap);
       mousetrap.switchKeymap(keymap);
       currentKeymap = keymap;
+    }
+  }
+
+  // Hack to work around issue #114
+  function blurParentButton(retryCount) {
+    if (retryCount > 100) {
+      error('Failed to blur parent button');
+      return;
+    }
+    var parentButton = getUniqueClass(document, 'item_detail_parent_info');
+    if (parentButton) {
+      debug('Retried', retryCount, 'times before successfully blurring parent button');
+      parentButton.blur();
+    } else {
+      setTimeout(function() { blurParentButton(retryCount + 1); }, 20);
     }
   }
 
